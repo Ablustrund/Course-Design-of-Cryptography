@@ -328,40 +328,43 @@ void Montgomerie(BIGNUM* result, const BIGNUM* b, const BIGNUM* pow, const BIGNU
 	BIGNUM* res = BN_new();
 	BIGNUM* Two = BN_new();
 	BIGNUM* Zero = BN_new();
-	BIGNUM* Cup = BN_new();
-	BIGNUM* Pow_backup = BN_new();
+	BIGNUM* tempNumb = BN_new();
+	BIGNUM* tempPow = BN_new();
 	BN_CTX* ctx = BN_CTX_new();
 
-	BN_one(result);
-	BN_set_word(Zero, 0);
+    //快速计算 result = b ^ pow (mod mod);
+    BN_one(result); // result = mont(1);
+    BN_set_word(Zero, 0);
 	BN_set_word(Two, 2);
-	BN_copy(res, b);
-	BN_copy(Pow_backup, pow);
+    BN_copy(res, b); // res = mont(b);
+    BN_copy(tempPow, pow); // tempPow = pow;
 
-	while (BN_cmp(Pow_backup, Zero) == 1)
-	{
-		BN_mod(Cup, Pow_backup, Two, ctx);
+    while (BN_cmp(tempPow, Zero) == 1) // while(e != 0);
+    {
+        BN_mod(tempNumb, tempPow, Two, ctx); // tempNumb = tempPow(mod 2);
 
-		if (BN_is_zero(Cup)) {
-			BN_mod_sqr(Cup, res, mod, ctx);
-			BN_copy(res, Cup);
+        if (BN_is_zero(tempNumb)) // if(tempNumb = 0(mod 2));
+        {
+            //prod = montmult(prod, a);
+            BN_mod_sqr(tempNumb, res, mod, ctx); //tempNumb = res^2(mod mod);
+            BN_copy(res, tempNumb);              //res = tempNumb;
 
-			BN_div(Cup, NULL, Pow_backup, Two, ctx);
-			BN_copy(Pow_backup, Cup);
+            BN_div(tempNumb, NULL, tempPow, Two, ctx);
+            BN_copy(tempPow, tempNumb);
+        }
+        else
+        {
+            BN_mod_mul(tempNumb, result, res, mod, ctx);
+            BN_copy(result, tempNumb); //result = result * res (mod mod);
 
-		}
-		else {
-			BN_mod_mul(Cup, result, res, mod, ctx);
-			BN_copy(result, Cup);
-
-			BN_sub(Cup, Pow_backup, BN_value_one());
-			BN_copy(Pow_backup, Cup);
-		}
-	}
+            BN_sub(tempNumb, tempPow, BN_value_one());
+            BN_copy(tempPow, tempNumb); // tempPow(e) = tempPow(e) - 1;
+        }
+    }
 
 	BN_CTX_free(ctx);
-	BN_free(Pow_backup);
-	BN_free(Cup);
+	BN_free(tempPow);
+	BN_free(tempNumb);
 	BN_free(Zero);
 	BN_free(Two);
 	BN_free(res);

@@ -77,13 +77,13 @@ start:
 	case 2:
 	{
 		Start = clock();
-        /*BN_bin2bn() converts the positive integer in big-endian form of length len at s 
-        into a BIGNUM and places it in ret. 
-        If ret is NULL, a new BIGNUM is created.*/
+		/*BN_bin2bn() converts the positive integer in big-endian form of length len at s
+		into a BIGNUM and places it in ret.
+		If ret is NULL, a new BIGNUM is created.*/
 		BN_bin2bn((unsigned char*)plainText, strlen(plainText), Plain); //plainText->plain
 
 		RSA_Encrypt(Plain, Cipher, n, e); // plain->cipher
-        printf("Cipher:\n%s\n", BN_bn2hex(Cipher));
+		printf("Cipher:\n%s\n", BN_bn2hex(Cipher));
 
 		File_Cipter = fopen("theCipherText.txt", "w+");//cipher->theCipherText.txt
 		fputs(BN_bn2hex(Cipher), File_Cipter);
@@ -217,7 +217,7 @@ void RSA_Decipher_Montg(const BIGNUM* Cipher, BIGNUM* Plain, const BIGNUM* n, co
 
 void modRepeatSquare(BIGNUM* result, const BIGNUM* b, const BIGNUM* pow, const BIGNUM* mod)
 {
-    //Result为结果，b为底数，Pow为幂，Mod为模
+	//Result为结果，b为底数，Pow为幂，Mod为模
 	BIGNUM* divRes = BN_new();
 	BIGNUM* tempB = BN_new();
 	BIGNUM* tempPow = BN_new();
@@ -234,9 +234,9 @@ void modRepeatSquare(BIGNUM* result, const BIGNUM* b, const BIGNUM* pow, const B
 
 	BN_set_word(aNew, 1);
 	BN_set_word(Two, 2);
-    /*膜重复平方*/
+	/*膜重复平方*/
 	do {
-        /* int BN_div(BIGNUM *dv, BIGNUM *rem, const BIGNUM *a, const BIGNUM *d, BN_CTX *ctx); dv=a/d, rem=a%d*/
+		/* int BN_div(BIGNUM *dv, BIGNUM *rem, const BIGNUM *a, const BIGNUM *d, BN_CTX *ctx); dv=a/d, rem=a%d*/
 		BN_div(divRes, rem, tempPow, Two, ctx);
 		if (BN_is_one(rem))  BN_mod_mul(a, aNew, tempB, mod, ctx);//rem = 1
 		else BN_copy(a, aNew);//rem = 0
@@ -264,12 +264,12 @@ void modRepeatSquare(BIGNUM* result, const BIGNUM* b, const BIGNUM* pow, const B
 
 void CRT(BIGNUM* result, const BIGNUM* y, const BIGNUM* p, const BIGNUM* q, const BIGNUM* pow)
 {
-    /*result = y^pow(mod p * q);
-    result为结果, y为底数, p and q为大素数, Pow为幂
-    解密rsa的流程c^d mod n,可以分解为 m1=c^d mod p以及m2=c^d mod q方程组
-    但是等式c^d mod p 或者 c^d mod q ，模数虽然从n降为p或q了，但是这个指数d还是较大，运算还是比较消耗性能。
-    所以 c^d mod p可以降阶为 c^(d mod p-1) mod p. 同理，c^d mod q可以降阶为 c^(d mod q-1) mod q*/
-    BIGNUM* Cp = BN_new();
+	/*result = y^pow(mod p * q);
+	result为结果, y为底数, p and q为大素数, Pow为幂
+	解密rsa的流程c^d mod n,可以分解为 m1=c^d mod p以及m2=c^d mod q方程组
+	但是等式c^d mod p 或者 c^d mod q ，模数虽然从n降为p或q了，但是这个指数d还是较大，运算还是比较消耗性能。
+	所以 c^d mod p可以降阶为 c^(d mod p-1) mod p. 同理，c^d mod q可以降阶为 c^(d mod q-1) mod q*/
+	BIGNUM* Cp = BN_new();
 	BIGNUM* Cq = BN_new();
 	BIGNUM* c1 = BN_new();
 	BIGNUM* c2 = BN_new();
@@ -285,28 +285,28 @@ void CRT(BIGNUM* result, const BIGNUM* y, const BIGNUM* p, const BIGNUM* q, cons
 
 	BN_CTX* ctx = BN_CTX_new();
 
-    BN_mul(mod, p, q, ctx); //mod = p * q;
+	BN_mul(mod, p, q, ctx); //mod = p * q;
 
-    BN_sub(pSub1, p, BN_value_one()); //pSub1 = p - 1;
-    BN_sub(qSub1, q, BN_value_one()); //qSub1 = q - 1;
-    //中国剩余定理加速
-    BN_nnmod(Pow1, pow, pSub1, ctx); //pow1 = pow(mod p-1);
-    BN_nnmod(Pow2, pow, qSub1, ctx); //pow2 = pow(mod q-1);
+	BN_sub(pSub1, p, BN_value_one()); //pSub1 = p - 1;
+	BN_sub(qSub1, q, BN_value_one()); //qSub1 = q - 1;
+	//中国剩余定理加速
+	BN_nnmod(Pow1, pow, pSub1, ctx); //pow1 = pow(mod p-1);
+	BN_nnmod(Pow2, pow, qSub1, ctx); //pow2 = pow(mod q-1);
 
-    modRepeatSquare(Cp, y, Pow1, p); // cp = y^pow1(mod p);
-    modRepeatSquare(Cq, y, Pow2, q); // cq = y^pow2(mod q);
-    //处理完毕, 下面为中国剩余定理
-    BN_mod_inverse(c1, q, p, ctx); // c1 * q = 1(mod p);
-    BN_mod_inverse(c2, p, q, ctx); // c2 * p = 1(mod q);
-    //计算中国剩余定理: b1 * M1 * M1-1 + b2 * M2 * M2-1
-    BN_mul(x11, Cp, c1, ctx);
-    BN_mul(x12, x11, q, ctx); // x12 = cp * c1 * q;
-    BN_mul(x21, Cq, c2, ctx);
-    BN_mul(x22, x21, p, ctx); // x22 = cq * c2 * p;
+	modRepeatSquare(Cp, y, Pow1, p); // cp = y^pow1(mod p);
+	modRepeatSquare(Cq, y, Pow2, q); // cq = y^pow2(mod q);
+	//处理完毕, 下面为中国剩余定理
+	BN_mod_inverse(c1, q, p, ctx); // c1 * q = 1(mod p);
+	BN_mod_inverse(c2, p, q, ctx); // c2 * p = 1(mod q);
+	//计算中国剩余定理: b1 * M1 * M1-1 + b2 * M2 * M2-1
+	BN_mul(x11, Cp, c1, ctx);
+	BN_mul(x12, x11, q, ctx); // x12 = cp * c1 * q;
+	BN_mul(x21, Cq, c2, ctx);
+	BN_mul(x22, x21, p, ctx); // x22 = cq * c2 * p;
 
-    BN_mod_add(result, x12, x22, mod, ctx); //result = x12 + x22;
+	BN_mod_add(result, x12, x22, mod, ctx); //result = x12 + x22;
 
-    BN_CTX_free(ctx);
+	BN_CTX_free(ctx);
 	BN_free(qSub1);
 	BN_free(pSub1);
 	BN_free(x22);
@@ -324,43 +324,50 @@ void CRT(BIGNUM* result, const BIGNUM* y, const BIGNUM* p, const BIGNUM* q, cons
 
 void Montgomerie(BIGNUM* result, const BIGNUM* b, const BIGNUM* pow, const BIGNUM* mod)
 {
-    //Result为结果, b为底数, pow为幂, mod为模
+	BIGNUM* tempNumb = BN_new();
+	BIGNUM* tempPow = BN_new();
+	BIGNUM* k = BN_new();
+	BIGNUM* r = BN_new();
+	BIGNUM* rn = BN_new();
+	BIGNUM* Y = BN_new();
+	BIGNUM* S = BN_new();
+	BN_CTX* ctx = BN_CTX_new();
+	BN_mod_exp(result, b, pow, mod, ctx);
+	BN_set_word(tempPow, 0);
 	BIGNUM* res = BN_new();
 	BIGNUM* Two = BN_new();
 	BIGNUM* Zero = BN_new();
-	BIGNUM* tempNumb = BN_new();
-	BIGNUM* tempPow = BN_new();
-	BN_CTX* ctx = BN_CTX_new();
 
-    //快速计算 result = b ^ pow (mod mod);
-    BN_one(result); // result = mont(1);
-    BN_set_word(Zero, 0);
+
+	//Y为结果, b为底数, pow为幂, mod为模
+	//令r = 2^k(mod n)
+	int tempK = BN_num_bits(mod);
 	BN_set_word(Two, 2);
-    BN_copy(res, b); // res = mont(b);
-    BN_copy(tempPow, pow); // tempPow = pow;
+	BN_set_word(k, tempK);
+	BN_exp(r, Two, k, ctx);
 
-    while (BN_cmp(tempPow, Zero) == 1) // while(e != 0);
-    {
-        BN_mod(tempNumb, tempPow, Two, ctx); // tempNumb = tempPow(mod 2);
+	// rn *r = 1(mod n);
+	BN_mod_inverse(rn, r, mod, ctx);
 
-        if (BN_is_zero(tempNumb)) // if(tempNumb = 0(mod 2));
-        {
-            //prod = montmult(prod, a);
-            BN_mod_sqr(tempNumb, res, mod, ctx); //tempNumb = res^2(mod mod);
-            BN_copy(res, tempNumb);              //res = tempNumb;
+	BN_set_word(Y, 1);
+	BN_mul(S, b, r, ctx);
 
-            BN_div(tempNumb, NULL, tempPow, Two, ctx);
-            BN_copy(tempPow, tempNumb);
-        }
-        else
-        {
-            BN_mod_mul(tempNumb, result, res, mod, ctx);
-            BN_copy(result, tempNumb); //result = result * res (mod mod);
+	// //快速计算 result = b ^ pow (mod mod);
+	while (BN_cmp(tempPow, Zero) == 1) // while(e != 0);
+	{
+		BN_mod(tempNumb, tempPow, Two, ctx); // tempNumb = tempPow(mod 2);
+		if (BN_is_one(tempNumb)) // if(tempNumb = 1(mod 2));
+		{
+			BN_mod_mul(tempNumb, Y, S, mod, ctx);
+			BN_mod_mul(Y, tempNumb, rn, mod, ctx);
+		}
+		// S = S*S(mod N);
+		BN_mod_mul(tempNumb, S, S, mod, ctx);
+		BN_copy(S, tempNumb);
 
-            BN_sub(tempNumb, tempPow, BN_value_one());
-            BN_copy(tempPow, tempNumb); // tempPow(e) = tempPow(e) - 1;
-        }
-    }
+		BN_div(tempNumb, NULL, tempPow, Two, ctx);
+		BN_copy(tempPow, tempNumb); //tempPow = tempPow/2;
+	}
 
 	BN_CTX_free(ctx);
 	BN_free(tempPow);
